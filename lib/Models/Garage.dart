@@ -11,10 +11,11 @@ class Garage{
   final String closedDates;
   final String coordinates;
   final bool canHandleCritical;
+  final List<dynamic> images;
 
   Garage(this.name, this.address, this.telNo, this.vehicleCategory, this
       .specializedIn, this.openTime, this.closeTime, this.closedDates, this
-      .coordinates, this.canHandleCritical);
+      .coordinates, this.canHandleCritical, this.images);
 
   Map<String, dynamic> toDocument() => <String, dynamic>{
     'name': name,
@@ -27,6 +28,7 @@ class Garage{
     'closedDates': closedDates,
     'coordinates': coordinates,
     'canHandleCritical': canHandleCritical,
+    'images': images,
   };
 
   factory Garage.fromDocument(DocumentSnapshot document){
@@ -41,6 +43,7 @@ class Garage{
       document["closedDates"],
       document["coordinates"],
       document["canHandleCritical"],
+      document["images"],
     );
     return newGarage;
   }

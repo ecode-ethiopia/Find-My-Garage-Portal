@@ -1,3 +1,7 @@
 library globals;
 
-List<String> imagePaths = new List<String>();
+import 'dart:io';
+import 'package:flutter/material.dart';
+
+List<File> images = new List<File>();
+GlobalKey<ScaffoldState> scaffoldKey;

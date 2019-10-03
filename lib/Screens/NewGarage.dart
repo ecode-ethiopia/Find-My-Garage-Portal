@@ -1,12 +1,15 @@
 import 'dart:io';
 import 'package:find_my_garage/Models/Garage.dart';
+import 'package:find_my_garage/Screens/UploadDialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:find_my_garage/Models/Globals.dart' as Globals;
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:percent_indicator/percent_indicator.dart';
 
 class NewGarage extends StatefulWidget {
   @override
@@ -14,8 +17,8 @@ class NewGarage extends StatefulWidget {
 }
 
 class NewGarageState extends State<NewGarage> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
   var openTimeTextController = TextEditingController();
   var closeTimeTextController = TextEditingController();
   var coordinateTextController = TextEditingController();
@@ -33,7 +36,7 @@ class NewGarageState extends State<NewGarage> {
   String closedDates = "";
   String coordinates = "";
   bool canHandleCritical = false;
-  //List<String> imagePaths = new List<String>();
+  List<String> images = new List<String>();
 
   Future<TimeOfDay> selectTime(BuildContext context, int hour, int minute) {
     return showTimePicker(
@@ -53,43 +56,41 @@ class NewGarageState extends State<NewGarage> {
   Future getImageFromCamera() async {
     var imageFile = await ImagePicker.pickImage(source: ImageSource.camera);
     if (imageFile == null) return;
-    String imageFilePath = imageFile.path;
-    if (!Globals.imagePaths.contains(imageFilePath)){
-      setState(() {
-        Globals.imagePaths.add(imageFilePath);
+    if (!Globals.images.contains(imageFile)){
+      setState((){
+        Globals.images.add(imageFile);
       });
     }
   }
   Future getImageFromGallery() async {
     var imageFile = await ImagePicker.pickImage(source: ImageSource.gallery);
     if (imageFile == null) return;
-    String imageFilePath = imageFile.path;
-    if (!Globals.imagePaths.contains(imageFilePath)){
-      setState(() {
-        Globals.imagePaths.add(imageFilePath);
+    if (!Globals.images.contains(imageFile)){
+      setState((){
+        Globals.images.add(imageFile);
       });
     }
   }
 
   Widget imageList(){
-   return Card(
-     elevation: 8,
-     child: SizedBox(
-       height: 180,
-       child: ListView.separated(
-         separatorBuilder: (context, index) => VerticalDivider(
-           color: Colors.white,
-           width: 2,
-         ),
-         itemBuilder: (BuildContext context, int index){
-         return Image.file(File(Globals.imagePaths[index]), width: 270, fit:
-           BoxFit.fitWidth);
-       },
-       itemCount: Globals.imagePaths.length,
-         scrollDirection: Axis.horizontal,
-       ),
-     ),
-   );
+    return Card(
+      elevation: 8,
+      child: SizedBox(
+        height: 180,
+        child: ListView.separated(
+          separatorBuilder: (context, index) => VerticalDivider(
+            color: Colors.white,
+            width: 2,
+          ),
+          itemBuilder: (BuildContext context, int index){
+            return Image.file(Globals.images[index], width: 270, fit:
+            BoxFit.fitWidth);
+          },
+          itemCount: Globals.images.length,
+          scrollDirection: Axis.horizontal,
+        ),
+      ),
+    );
   }
 
   void setOpenTime() async {
@@ -140,9 +141,13 @@ class NewGarageState extends State<NewGarage> {
       setState(() {
         coordinates = currentCoordinates;
         coordinateTextController.text = coordinates;
-
       });
-
+    }).catchError((e){
+      Navigator.of(context).pop();
+      showSnackBar(e, 2000);
+    }).timeout(Duration(seconds: 10), onTimeout: (){
+      Navigator.of(context).pop();
+      showSnackBar("Time out, check your settings", 2000);
     });
   }
   void onSaved(){
@@ -152,45 +157,22 @@ class NewGarageState extends State<NewGarage> {
     if(_formKey.currentState.validate()){
       _formKey.currentState.save();
       Garage newGarage = new Garage(name, address, telNo, vehicleCategory,
-          specializedIn, openTime, closeTime, closedDates, coordinates, canHandleCritical);
+          specializedIn, openTime, closeTime, closedDates, coordinates,
+          canHandleCritical, images);
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context){
           return WillPopScope(
-            onWillPop: () => null,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Center(
-                  child: SizedBox(
-                    width: 50,
-                    height: 50,
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-              ],
-            )
+              onWillPop: () => null,
+              child: UploadDialog(newGarage),
           );
         }
       );
-      newGarageToFireStore(newGarage);
     }
-  }
-  void newGarageToFireStore(Garage newGarage)async{
-    await Firestore.instance
-        .collection("garages")
-        .add(newGarage.toDocument()).then((value){
-      Navigator.of(context).pop();
-      showSnackBar("Saved", 1000);
-    }).catchError((e){
-      Navigator.of(context).pop();
-      showSnackBar(e, 2000);
-    }).timeout(Duration(seconds: 10), onTimeout: (){
-      Navigator.of(context).pop();
-      showSnackBar("Time out, check your internet connection", 2000);
-    });
+    else{
+      showSnackBar("check all the fields", 1000);
+    }
   }
   void viewOnMap(String longitudeLatitude){
     String url = "https://www.google.com/maps/search/?api=1&query=" + longitudeLatitude;
@@ -211,9 +193,10 @@ class NewGarageState extends State<NewGarage> {
       content: Row(
         children: <Widget>[
           Text(title)
-      ],
-    ),
+        ],
+      ),
       duration: Duration(milliseconds: duration),));
+    HapticFeedback.mediumImpact();
   }
 
   @override
@@ -223,11 +206,14 @@ class NewGarageState extends State<NewGarage> {
     openTimeTextController.text = openTime;
     closeTimeTextController.text = closeTime;
     coordinateTextController.text = coordinates;
+    Globals.images.clear();
+    Globals.scaffoldKey = _scaffoldKey;
   }
 
   @override
   void dispose() {
-    Globals.imagePaths.clear();
+    Globals.images.clear();
+    Globals.scaffoldKey = null;
     super.dispose();
   }
 
@@ -449,7 +435,7 @@ class NewGarageState extends State<NewGarage> {
                       ],
                     ),
                     SizedBox(height: 20,),
-                    (Globals.imagePaths.length == 0)?SizedBox():imageList(),
+                    (Globals.images.length == 0)?SizedBox():imageList(),
                     SizedBox(height: 20,),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,

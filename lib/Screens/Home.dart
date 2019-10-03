@@ -2,6 +2,7 @@ import 'package:find_my_garage/Models/Garage.dart';
 import 'package:find_my_garage/Screens/NewGarage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Home extends StatefulWidget {
@@ -10,7 +11,7 @@ class Home extends StatefulWidget {
 }
 
 class HomeState extends State<Home> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   void launchURL(String url) async {
     if (await canLaunch(url)) {
@@ -34,6 +35,7 @@ class HomeState extends State<Home> {
         ],
       ),
       duration: Duration(milliseconds: duration),));
+    HapticFeedback.mediumImpact();
   }
 
   @override
@@ -67,9 +69,10 @@ class HomeState extends State<Home> {
             else{
               return ListView.separated(
                 separatorBuilder: (context, index) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 17),
                   child: Divider(
-                    color: Colors.black,
+                    color: Theme.of(context).primaryColorDark,
+                    thickness: 1,
                   ),
                 ),
 
@@ -88,7 +91,22 @@ class HomeState extends State<Home> {
                         Text(tempGarage.address),
                       ],
                     ),
-                    leading: Text((index+1).toString()),
+                    leading: (tempGarage.images == null || tempGarage.images
+                        .length == 0)?Container(
+                      width: 100,
+                      child: Center(child: Text("No Image")),
+                    ):Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          width: 3,
+                            color: Theme.of(context).primaryColor
+                        )
+                      ),
+                      width: 100,
+                      child: Image.network
+                        (tempGarage.images.first, fit: BoxFit.fill,),
+                    ),
+                    trailing: Text((index+1).toString()),
                     onLongPress: (){
                       viewOnMap(tempGarage.coordinates);
                     },
