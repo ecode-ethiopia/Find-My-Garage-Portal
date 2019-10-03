@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "667151808306",
+    "firebase_url": "https://find-my-garage-9986f.firebaseio.com",
+    "project_id": "find-my-garage-9986f",
+    "storage_bucket": "find-my-garage-9986f.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:667151808306:android:166a3aa456cef16078492b",
+        "android_client_info": {
+          "package_name": "com.netdom.find_my_garage"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "667151808306-ng0sgeud6vs016cj34uffi7h1stn8gla.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMM8mjp-LW79Is47tDjROD2Y9YYYMTruI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "667151808306-ng0sgeud6vs016cj34uffi7h1stn8gla.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
