@@ -5,6 +5,9 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:find_my_garage/Models/Globals.dart' as Globals;
 import 'package:flutter/services.dart';
+import 'package:percent_indicator/percent_indicator.dart';
+import 'package:shimmer/shimmer.dart';
+import 'dart:ui';
 
 class UploadDialog extends StatefulWidget {
   @override
@@ -103,26 +106,81 @@ class UploadDialogState extends State<UploadDialog> {
   Widget build(BuildContext context) {
     return Material(
       type: MaterialType.transparency,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.end,
+      child: Stack(
+        alignment: Alignment.center,
         children: <Widget>[
-          SizedBox(
-            width: MediaQuery.of(context).size.width,
-            height: 2,
-            child: LinearProgressIndicator(),
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 5,sigmaY: 5),
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              color: Colors.black.withOpacity(0.4),
+            ),
           ),
-          SizedBox(height: 30,),
-          Text(
-            "Uploading...("+(((currentUploadCount+1) < Globals.images.length)
-                ?(currentUploadCount+1):Globals.images.length)
-                .toString()
-                +"/"+Globals.images.length.toString()+")",
-            style:
-            new TextStyle(fontWeight: FontWeight.normal, fontSize: 24.0,
-                color: Colors.white),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              (uploadTask == null)?SizedBox():StreamBuilder<StorageTaskEvent>(
+                stream: uploadTask.events,
+                builder: (_, snapshot){
+                  var event = snapshot?.data?.snapshot;
+                  double progressPercent = 0;
+                  if (uploadTask.isInProgress){
+                    progressPercent = (event != null)?event
+                        .bytesTransferred/event.totalByteCount:0;
+                  }
+                  if (uploadTask.isComplete) progressPercent = 1;
+                  return SizedBox(
+                    width: 300,
+                    height: 300,
+                    child: CircularPercentIndicator(
+                      radius: 120.0,
+                      lineWidth: 13.0,
+                      animation: true,
+                      animateFromLastPercent: true,
+                      percent: progressPercent,
+                      center: new Text(
+                        (progressPercent*100).toInt().toString()+"%",
+                        style:
+                        new TextStyle(fontWeight: FontWeight.bold,
+                            fontSize: 20.0, color: Colors.white),
+                      ),
+                      circularStrokeCap: CircularStrokeCap.round,
+                      progressColor: Theme.of(context).primaryColor,
+                    ),
+                  );
+                },
+              ),
+              SizedBox(height: 50,),
+              SizedBox(
+                height: 5,
+                width: MediaQuery.of(context).size.width,
+                child: LinearProgressIndicator(),
+              ),
+              SizedBox(height: 30,),
+              Shimmer.fromColors(
+                baseColor: Colors.white,
+                highlightColor: Colors.grey.withOpacity(0.5),
+                period: Duration(seconds: 2),
+                child: (uploadTask == null)?Text(
+                  "Saving...",
+                  style:
+                  new TextStyle(fontWeight: FontWeight.normal, fontSize: 24.0,
+                      color: Colors.white),
+                ):Text(
+                  "Saving...("+(((currentUploadCount+1) < Globals.images.length)
+                      ?(currentUploadCount+1):Globals.images.length)
+                      .toString()
+                      +"/"+Globals.images.length.toString()+")",
+                  style:
+                  new TextStyle(fontWeight: FontWeight.normal, fontSize: 24.0,
+                      color: Colors.white),
+                ),
+              ),
+              SizedBox(height: 50,),
+            ],
           ),
-          SizedBox(height: 50,),
         ],
       ),
     );

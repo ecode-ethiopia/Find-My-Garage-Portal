@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:find_my_garage/Models/Garage.dart';
 import 'package:find_my_garage/Screens/UploadDialog.dart';
 import 'package:flutter/material.dart';
@@ -6,10 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:find_my_garage/Models/Globals.dart' as Globals;
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:percent_indicator/percent_indicator.dart';
 
 class NewGarage extends StatefulWidget {
   @override
@@ -19,6 +17,7 @@ class NewGarage extends StatefulWidget {
 class NewGarageState extends State<NewGarage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   var openTimeTextController = TextEditingController();
   var closeTimeTextController = TextEditingController();
   var coordinateTextController = TextEditingController();
@@ -56,39 +55,61 @@ class NewGarageState extends State<NewGarage> {
   Future getImageFromCamera() async {
     var imageFile = await ImagePicker.pickImage(source: ImageSource.camera);
     if (imageFile == null) return;
-    if (!Globals.images.contains(imageFile)){
+    List<File> tempFileList = new List<File>();
+    tempFileList = Globals.images.where((File item){
+      if (item.path == imageFile.path) return true;
+      else return false;
+    }).toList();
+    if (tempFileList.length == 0){
       setState((){
         Globals.images.add(imageFile);
       });
+    }
+    else{
+      showSnackBar("Alreay exists", 1000);
     }
   }
   Future getImageFromGallery() async {
     var imageFile = await ImagePicker.pickImage(source: ImageSource.gallery);
     if (imageFile == null) return;
-    if (!Globals.images.contains(imageFile)){
+    List<File> tempFileList = new List<File>();
+    tempFileList = Globals.images.where((File item){
+      if (item.path == imageFile.path) return true;
+      else return false;
+    }).toList();
+    if (tempFileList.length == 0){
       setState((){
         Globals.images.add(imageFile);
       });
     }
+    else{
+      showSnackBar("Alreay exists", 1000);
+    }
   }
 
   Widget imageList(){
-    return Card(
-      elevation: 8,
-      child: SizedBox(
-        height: 180,
-        child: ListView.separated(
-          separatorBuilder: (context, index) => VerticalDivider(
-            color: Colors.white,
-            width: 2,
-          ),
-          itemBuilder: (BuildContext context, int index){
-            return Image.file(Globals.images[index], width: 270, fit:
-            BoxFit.fitWidth);
-          },
-          itemCount: Globals.images.length,
-          scrollDirection: Axis.horizontal,
-        ),
+    return Container(
+      height: 100.0 * Globals.images.length,
+      child: ListView.separated(
+        separatorBuilder: (BuildContext context, int index){
+          return Divider();
+        },
+        itemBuilder: (BuildContext context, int index){
+          return Row(
+            children: <Widget>[
+              Image.file(Globals.images[index], fit:
+              BoxFit.contain, width: 160, height: 90,),
+              SizedBox(width: 20,),
+              IconButton(
+                onPressed: () => removePicture(index),
+                icon: Icon(Icons.close),
+              ),
+            ],
+          );
+        },
+        itemCount: Globals.images.length,
+        scrollDirection: Axis.vertical,
+        physics: NeverScrollableScrollPhysics(),
       ),
     );
   }
@@ -118,18 +139,33 @@ class NewGarageState extends State<NewGarage> {
         builder: (BuildContext context){
           return WillPopScope(
               onWillPop: () => null,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Center(
-                    child: SizedBox(
-                      width: 50,
-                      height: 50,
-                      child: CircularProgressIndicator(),
+              child: Material(
+                type: MaterialType.transparency,
+                child: Stack(
+                  children: <Widget>[
+                    BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5,sigmaY: 5),
+                      child: Container(
+                        width: MediaQuery.of(context).size.width,
+                        height: MediaQuery.of(context).size.height,
+                        color: Colors.black.withOpacity(0.4),
+                      ),
                     ),
-                  ),
-                ],
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Center(
+                          child: SizedBox(
+                            width: 50,
+                            height: 50,
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               )
           );
         }
@@ -184,6 +220,11 @@ class NewGarageState extends State<NewGarage> {
     } else {
       showSnackBar("Could not launch", 1500);
     }
+  }
+  void removePicture(int index){
+    setState(() {
+      Globals.images.removeAt(index);
+    });
   }
   void showSnackBar(String title, int duration){
     _scaffoldKey.currentState.hideCurrentSnackBar(reason:
@@ -245,7 +286,7 @@ class NewGarageState extends State<NewGarage> {
                         return null;
                       },
                       onSaved: (value){
-                        name = value;
+                        name = value.trim();
                       },
                       decoration: InputDecoration(
                           border: OutlineInputBorder(), labelText: "Name"),
@@ -259,7 +300,7 @@ class NewGarageState extends State<NewGarage> {
                         return null;
                       },
                       onSaved: (value){
-                        address = value;
+                        address = value.trim();
                       },
                       decoration: InputDecoration(
                           border: OutlineInputBorder(),
@@ -276,7 +317,7 @@ class NewGarageState extends State<NewGarage> {
                         return null;
                       },
                       onSaved: (value){
-                        telNo = value;
+                        telNo = value.trim();
                       },
                       maxLength: 10,
                       maxLengthEnforced: true,
@@ -295,7 +336,7 @@ class NewGarageState extends State<NewGarage> {
                         return null;
                       },
                       onSaved: (value){
-                        vehicleCategory = value;
+                        vehicleCategory = value.trim();
                       },
                       decoration: InputDecoration(
                           border: OutlineInputBorder(),
@@ -311,7 +352,7 @@ class NewGarageState extends State<NewGarage> {
                         return null;
                       },
                       onSaved: (value){
-                        specializedIn = value;
+                        specializedIn = value.trim();
                       },
                       decoration: InputDecoration(
                           border: OutlineInputBorder(),
@@ -370,7 +411,7 @@ class NewGarageState extends State<NewGarage> {
                         return null;
                       },
                       onSaved: (value){
-                        closedDates = value;
+                        closedDates = value.trim();
                       },
                       decoration: InputDecoration(
                           border: OutlineInputBorder(),
@@ -400,6 +441,7 @@ class NewGarageState extends State<NewGarage> {
                         SizedBox(width: 10,),
                         (coordinates.isEmpty)?SizedBox():IconButton(
                             icon: Icon(Icons.map),
+                            iconSize: 40,
                             onPressed: (){
                               viewOnMap(coordinates);
                             }
@@ -426,9 +468,12 @@ class NewGarageState extends State<NewGarage> {
                       children: <Widget>[
                         IconButton(
                           icon: Icon(Icons.photo),
+                          iconSize: 40,
                           onPressed: getImageFromGallery,
                         ),
+                        SizedBox(width: 50,),
                         IconButton(
+                          iconSize: 40,
                           icon: Icon(Icons.camera_alt),
                           onPressed: getImageFromCamera,
                         ),

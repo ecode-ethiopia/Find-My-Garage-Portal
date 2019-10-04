@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class Home extends StatefulWidget {
   @override
@@ -70,12 +72,8 @@ class HomeState extends State<Home> {
               return ListView.separated(
                 separatorBuilder: (context, index) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 17),
-                  child: Divider(
-                    color: Theme.of(context).primaryColorDark,
-                    thickness: 1,
-                  ),
+                  child: Divider(),
                 ),
-
                 itemCount: snapshot.data.documents.length,
                 itemBuilder: (BuildContext context, int index){
                   Garage tempGarage = Garage.fromDocument(snapshot.data
@@ -93,18 +91,34 @@ class HomeState extends State<Home> {
                     ),
                     leading: (tempGarage.images == null || tempGarage.images
                         .length == 0)?Container(
-                      width: 100,
+                      width: 80,
                       child: Center(child: Text("No Image")),
                     ):Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          width: 3,
-                            color: Theme.of(context).primaryColor
-                        )
+                      width: 80,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: <Widget>[
+                          Shimmer.fromColors(
+                              child: Container(
+                                width: 80,
+                                height: 45,
+                                color: Colors.grey,
+                              ),
+                              period: Duration(seconds: 1),
+                              baseColor: Colors.grey.withOpacity(0.5),
+                              highlightColor: Colors.white
+                          ),
+                          CachedNetworkImage(
+                            errorWidget: (context, url, error) => new Icon(Icons
+                                .error),
+                            imageUrl: tempGarage.images.first,
+                            fit: BoxFit.fill,
+                            width: 80,
+                            fadeInDuration: Duration(milliseconds: 200),
+                          ),
+
+                        ],
                       ),
-                      width: 100,
-                      child: Image.network
-                        (tempGarage.images.first, fit: BoxFit.fill,),
                     ),
                     trailing: Text((index+1).toString()),
                     onLongPress: (){
